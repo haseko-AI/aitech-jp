@@ -1006,8 +1006,14 @@
             .nth-weekday-row .nth-apply-btn:hover { background: #45a049; }
         }
         @media (max-width: 768px) {
-            .nth-weekday-row .nth-apply-btn { display: none; } /* 行内ボタンを隠す */
-            .nth-apply-btn-wrap { display: block; } /* 外の適用ボタンを表示 */
+            .nth-weekday-row .nth-apply-btn { display: none; }
+            .nth-apply-btn-wrap { display: block; }
+            .nth-weekday-row { flex-wrap: wrap; }
+            .nth-row-line1 { display: flex; gap: 8px; align-items: center; width: 100%; }
+            .nth-row-line2 { display: flex; gap: 6px; align-items: center; width: 100%; flex-wrap: wrap; }
+        }
+        @media (min-width: 769px) {
+            .nth-row-line1, .nth-row-line2 { display: contents; }
         }
 /* ========== /SECTION: 曜日デフォルト設定 ========== */
 
@@ -1092,7 +1098,7 @@
 </head>
 
 <body>
-    <div style="position: fixed; top: 8px; right: 12px; color: #bbb; font-size: 11px; z-index: 9999;">Ver 11.4.238</div>
+    <div style="position: fixed; top: 8px; right: 12px; color: #bbb; font-size: 11px; z-index: 9999;">Ver 11.11.245</div>
 
     <!-- ========== sticky：月カラー帯（PC/SP共通固定） ========== -->
     <div class="header-row1" id="header-row1">
@@ -1231,7 +1237,9 @@
         const images = [
             // ===== ごみ・資源系 =====
             { icon: `images/011.png${V}`, label: '可燃ごみ' },
+            { icon: `images/012.png${V}`, label: '可燃ごみ' },
             { icon: `images/021.png${V}`, label: '不燃ごみ' },
+            { icon: `images/022.png${V}`, label: '不燃ごみ' },
             { icon: `images/101.png${V}`, label: 'リサイクル' },
             { icon: `images/111.png${V}`, label: '資源ごみ' },
             { icon: `images/121.png${V}`, label: '資源' },
@@ -1261,12 +1269,20 @@
             { icon: `images/597.png${V}`, label: '（青枠）' },
             { icon: `images/598.png${V}`, label: '（黒枠）' },
             { icon: `images/599.png${V}`, label: '（赤枠）' },
+            { icon: `images/610.png${V}`, label: '缶・古紙(地活)' },
+            { icon: `images/620.png${V}`, label: '缶のみ(地活)' },
+            { icon: `images/630.png${V}`, label: '古紙のみ(地活)' },
             // ===== ガス系（新設） =====
             { icon: `images/2500.png${V}`, label: 'ガス給湯器(点検)' },
             { icon: `images/2600.png${V}`, label: 'ガス設備定期点検' },
             { icon: `images/2700.png${V}`, label: 'ガス消費機器調査' },
             { icon: `images/2800.png${V}`, label: 'ガス警報器(交換)' },
             { icon: `images/2900.png${V}`, label: 'ガスガバナー室点検' },
+            // ===== イベント系 =====
+            { icon: `images/1100.png${V}`, label: 'お祭り' },
+            { icon: `images/1110.png${V}`, label: '花火大会' },
+            { icon: `images/1200.png${V}`, label: '高校入試' },
+            { icon: `images/1210.png${V}`, label: '高校入試(実技)' },
             // ===== 工事・作業系 =====
             { icon: `images/3400.png${V}`, label: '停電作業' },
             { icon: `images/3500.png${V}`, label: '断水作業' },
@@ -1595,19 +1611,17 @@
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dow = (firstDay + day - 1) % 7;
                     const def = weekdayDefaults[dow];
+                    let image1 = def ? { icon: def, label: images.find(i=>i.icon===def)?.label||'' } : null;
                     let image2 = null;
                     nthWeekdayDefaults.forEach(item => {
-                        if (!item.icon) return;
+                        if (!item.iconL && !item.iconR) return;
                         const nthDay = getNthWeekdayDate(year, month, item.n, item.dow);
                         if (nthDay === day) {
-                            image2 = { icon: item.icon, label: item.label };
+                            if (item.iconL) image1 = { icon: item.iconL, label: item.labelL };
+                            if (item.iconR) image2 = { icon: item.iconR, label: item.labelR };
                         }
                     });
-                    calendarData[day] = {
-                        image1: def ? { icon: def, label: images.find(i=>i.icon===def)?.label||'' } : null,
-                        image2: image2,
-                        comment: ''
-                    };
+                    calendarData[day] = { image1, image2, comment: '' };
                 }
             } else if (!clearData) {
                 // 既存月：フラグがない日のみデフォルト適用
@@ -1624,10 +1638,15 @@
                     // 右シール：未設定かつフラグなしのみ
                     if (!calendarData[day].image2 && !calendarData[day].image2Intentional) {
                         nthWeekdayDefaults.forEach(item => {
-                            if (!item.icon) return;
+                            if (!item.iconL && !item.iconR) return;
                             const nthDay = getNthWeekdayDate(year, month, item.n, item.dow);
                             if (nthDay === day) {
-                                calendarData[day].image2 = { icon: item.icon, label: item.label };
+                                if (item.iconL && !calendarData[day].image1 && !calendarData[day].image1Intentional) {
+                                    calendarData[day].image1 = { icon: item.iconL, label: item.labelL };
+                                }
+                                if (item.iconR) {
+                                    calendarData[day].image2 = { icon: item.iconR, label: item.labelR };
+                                }
                             }
                         });
                     }
@@ -1764,8 +1783,13 @@
         function clearImageSelection() {
             // 第N曜日の解除
             if (currentNthIdx !== null) {
-                nthWeekdayDefaults[currentNthIdx].icon = null;
-                nthWeekdayDefaults[currentNthIdx].label = '';
+                if (currentNthSlot === 'L') {
+                    nthWeekdayDefaults[currentNthIdx].iconL = null;
+                    nthWeekdayDefaults[currentNthIdx].labelL = '';
+                } else {
+                    nthWeekdayDefaults[currentNthIdx].iconR = null;
+                    nthWeekdayDefaults[currentNthIdx].labelR = '';
+                }
                 saveNthWeekdayDefaults();
                 buildNthWeekdayUI();
                 closeModal();
@@ -1899,13 +1923,21 @@
 /* ========== /SECTION: 曜日デフォルト設定 ========== */
 
 /* ========== SECTION: 第N曜日デフォルト設定 ========== */
-        // データ構造（将来の拡張に備えてslot・優先度も持つ）
-        // { n: 第何週(1-5), dow: 曜日(0=日-6=土), slot: 2(右), icon: 画像パス, label: ラベル }
-        const NTH_WEEKDAY_COUNT = 2; // 現在の設定枠数（将来は増やすだけ）
+        // データ構造：{ n: 第何週(1-5), dow: 曜日(0=日-6=土), iconL: 左画像, labelL: 左ラベル, iconR: 右画像, labelR: 右ラベル }
+        const NTH_MAX_ROWS = 99;
         let nthWeekdayDefaults = [
-            { n: 1, dow: 0, slot: 2, icon: null, label: '' },
-            { n: 2, dow: 0, slot: 2, icon: null, label: '' },
+            { n: 1, dow: 0, iconL: null, labelL: '', iconR: null, labelR: '' },
         ];
+        // 既存データのマイグレーション（旧形式→新形式）
+        function migrateNthData(old) {
+            if (!Array.isArray(old)) return null;
+            return old.map(item => ({
+                n: item.n || 1,
+                dow: item.dow || 0,
+                iconL: null, labelL: '',
+                iconR: item.icon || null, labelR: item.label || '',
+            }));
+        }
 
         // 第N曜日UIを生成
         function buildNthWeekdayUI() {
@@ -1918,6 +1950,8 @@
             nthWeekdayDefaults.forEach((item, idx) => {
                 const row = document.createElement('div');
                 row.className = 'nth-weekday-row';
+                row.style.cssText = 'opacity:0;transition:opacity 0.4s;';
+                setTimeout(() => { row.style.opacity = '1'; }, 30 * idx);
 
                 // 第N選択
                 const selN = document.createElement('select');
@@ -1947,30 +1981,63 @@
                     saveNthWeekdayDefaults();
                 };
 
-                // シール表示
-                const imgDiv = document.createElement('div');
-                imgDiv.className = 'selected-weekday-image';
-                imgDiv.textContent = '画像選択';
-                if (item.icon) {
-                    imgDiv.innerHTML = `<img src="${item.icon}" style="max-width:100%;max-height:36px;">`;
-                }
-                imgDiv.onclick = () => openNthWeekdayImageSelector(idx);
+                // 左シール
+                const imgDivL = document.createElement('div');
+                imgDivL.className = 'selected-weekday-image';
+                imgDivL.title = '左画像';
+                imgDivL.style.cssText = 'border:1.5px dashed #aaa;position:relative;';
+                imgDivL.innerHTML = item.iconL
+                    ? `<img src="${item.iconL}" style="max-width:100%;max-height:36px;"><span style="position:absolute;top:1px;left:2px;font-size:9px;color:#888;">左</span>`
+                    : '<span style="font-size:11px;color:#aaa;">(左)画像</span>';
+                imgDivL.onclick = () => openNthWeekdayImageSelector(idx, 'L');
 
-                // 解除ボタン
-                const clearBtn = document.createElement('button');
-                clearBtn.textContent = '✕';
-                clearBtn.style.cssText = 'padding:4px 8px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;flex-shrink:0;';
-                clearBtn.onclick = () => {
-                    nthWeekdayDefaults[idx].icon = null;
-                    nthWeekdayDefaults[idx].label = '';
+                // 左解除
+                const clearBtnL = document.createElement('button');
+                clearBtnL.textContent = '✕';
+                clearBtnL.style.cssText = 'padding:2px 5px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0;';
+                clearBtnL.onclick = () => {
+                    nthWeekdayDefaults[idx].iconL = null;
+                    nthWeekdayDefaults[idx].labelL = '';
                     saveNthWeekdayDefaults();
                     buildNthWeekdayUI();
                 };
 
-                row.appendChild(selN);
-                row.appendChild(selDow);
-                row.appendChild(imgDiv);
-                row.appendChild(clearBtn);
+                // 右シール
+                const imgDivR = document.createElement('div');
+                imgDivR.className = 'selected-weekday-image';
+                imgDivR.title = '右画像';
+                imgDivR.style.cssText = 'border:1.5px dashed #aaa;position:relative;';
+                imgDivR.innerHTML = item.iconR
+                    ? `<img src="${item.iconR}" style="max-width:100%;max-height:36px;"><span style="position:absolute;top:1px;left:2px;font-size:9px;color:#888;">右</span>`
+                    : '<span style="font-size:11px;color:#aaa;">画像(右)</span>';
+                imgDivR.onclick = () => openNthWeekdayImageSelector(idx, 'R');
+
+                // 右解除
+                const clearBtnR = document.createElement('button');
+                clearBtnR.textContent = '✕';
+                clearBtnR.style.cssText = 'padding:2px 5px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0;';
+                clearBtnR.onclick = () => {
+                    nthWeekdayDefaults[idx].iconR = null;
+                    nthWeekdayDefaults[idx].labelR = '';
+                    saveNthWeekdayDefaults();
+                    buildNthWeekdayUI();
+                };
+
+                const line1 = document.createElement('div');
+                line1.className = 'nth-row-line1';
+                line1.appendChild(selN);
+                line1.appendChild(selDow);
+
+                const line2 = document.createElement('div');
+                line2.className = 'nth-row-line2';
+                line2.appendChild(imgDivL);
+                line2.appendChild(clearBtnL);
+                line2.appendChild(imgDivR);
+                line2.appendChild(clearBtnR);
+
+                row.appendChild(line1);
+                row.appendChild(line2);
+
                 // PC版：行内に適用ボタン
                 const applyBtn = document.createElement('button');
                 applyBtn.textContent = 'この月に適用';
@@ -1981,11 +2048,89 @@
             });
         }
 
+        // ふわっと次の行を追加
+        function addNthRowIfNeeded() {
+            const last = nthWeekdayDefaults[nthWeekdayDefaults.length - 1];
+            const hasImage = last.iconL || last.iconR;
+            if (!hasImage) return;
+            if (nthWeekdayDefaults.length >= NTH_MAX_ROWS) return;
+            nthWeekdayDefaults.push({ n: 1, dow: 0, iconL: null, labelL: '', iconR: null, labelR: '' });
+            // ふわっと追加（最後の行だけ追加）
+            const container = document.getElementById('nth-weekday-list');
+            if (!container) return;
+            const nOptions = ['第1','第2','第3','第4','第5'];
+            const dowOptions = ['日','月','火','水','木','金','土'];
+            const idx = nthWeekdayDefaults.length - 1;
+            const item = nthWeekdayDefaults[idx];
+            const row = document.createElement('div');
+            row.className = 'nth-weekday-row';
+            row.style.cssText = 'opacity:0;transition:opacity 0.5s;';
+            setTimeout(() => { row.style.opacity = '1'; }, 50);
+
+            const selN = document.createElement('select');
+            nOptions.forEach((label, i) => {
+                const opt = document.createElement('option');
+                opt.value = i + 1; opt.textContent = label;
+                if (item.n === i + 1) opt.selected = true;
+                selN.appendChild(opt);
+            });
+            selN.onchange = () => { nthWeekdayDefaults[idx].n = parseInt(selN.value); saveNthWeekdayDefaults(); };
+
+            const selDow = document.createElement('select');
+            dowOptions.forEach((label, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = label + '曜';
+                if (item.dow === i) opt.selected = true;
+                selDow.appendChild(opt);
+            });
+            selDow.onchange = () => { nthWeekdayDefaults[idx].dow = parseInt(selDow.value); saveNthWeekdayDefaults(); };
+
+            const imgDivL = document.createElement('div');
+            imgDivL.className = 'selected-weekday-image';
+            imgDivL.style.cssText = 'border:1.5px dashed #aaa;position:relative;';
+            imgDivL.innerHTML = '<span style="font-size:11px;color:#aaa;">(左)画像</span>';
+            imgDivL.onclick = () => openNthWeekdayImageSelector(idx, 'L');
+
+            const clearBtnL = document.createElement('button');
+            clearBtnL.textContent = '✕';
+            clearBtnL.style.cssText = 'padding:2px 5px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0;';
+            clearBtnL.onclick = () => { nthWeekdayDefaults[idx].iconL = null; nthWeekdayDefaults[idx].labelL = ''; saveNthWeekdayDefaults(); buildNthWeekdayUI(); };
+
+            const imgDivR = document.createElement('div');
+            imgDivR.className = 'selected-weekday-image';
+            imgDivR.style.cssText = 'border:1.5px dashed #aaa;position:relative;';
+            imgDivR.innerHTML = '<span style="font-size:11px;color:#aaa;">画像(右)</span>';
+            imgDivR.onclick = () => openNthWeekdayImageSelector(idx, 'R');
+
+            const clearBtnR = document.createElement('button');
+            clearBtnR.textContent = '✕';
+            clearBtnR.style.cssText = 'padding:2px 5px;background:#e53935;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0;';
+            clearBtnR.onclick = () => { nthWeekdayDefaults[idx].iconR = null; nthWeekdayDefaults[idx].labelR = ''; saveNthWeekdayDefaults(); buildNthWeekdayUI(); };
+
+            const applyBtn = document.createElement('button');
+            applyBtn.textContent = 'この月に適用';
+            applyBtn.className = 'nth-apply-btn';
+            applyBtn.onclick = () => applyNthWeekdayDefaultsToCurrentMonth();
+
+            const line1 = document.createElement('div');
+            line1.className = 'nth-row-line1';
+            line1.appendChild(selN); line1.appendChild(selDow);
+            const line2 = document.createElement('div');
+            line2.className = 'nth-row-line2';
+            line2.appendChild(imgDivL); line2.appendChild(clearBtnL);
+            line2.appendChild(imgDivR); line2.appendChild(clearBtnR);
+            row.appendChild(line1); row.appendChild(line2);
+            row.appendChild(applyBtn);
+            container.appendChild(row);
+        }
+
         // 第N曜日画像選択モーダルを開く
         let currentNthIdx = null;
+        let currentNthSlot = 'R'; // 'L' or 'R'
 
-        function openNthWeekdayImageSelector(idx) {
+        function openNthWeekdayImageSelector(idx, slot) {
             currentNthIdx = idx;
+            currentNthSlot = slot || 'R';
             currentWeekdaySelection = null;
             currentDay = null;
 
@@ -1997,8 +2142,8 @@
 
             const grid = document.getElementById('imageGrid');
             grid.innerHTML = '';
-            // 右シール用なので降順表示
-            const sortedImages = [...images].reverse();
+            // L=昇順・R=降順
+            const sortedImages = currentNthSlot === 'L' ? [...images] : [...images].reverse();
             sortedImages.forEach(img => {
                 const option = document.createElement('div');
                 option.className = 'image-option';
@@ -2013,10 +2158,16 @@
 
         function selectNthWeekdayImage(icon, label) {
             if (currentNthIdx === null) return;
-            nthWeekdayDefaults[currentNthIdx].icon  = icon;
-            nthWeekdayDefaults[currentNthIdx].label = label;
+            if (currentNthSlot === 'L') {
+                nthWeekdayDefaults[currentNthIdx].iconL  = icon;
+                nthWeekdayDefaults[currentNthIdx].labelL = label;
+            } else {
+                nthWeekdayDefaults[currentNthIdx].iconR  = icon;
+                nthWeekdayDefaults[currentNthIdx].labelR = label;
+            }
             saveNthWeekdayDefaults();
             buildNthWeekdayUI();
+            addNthRowIfNeeded(); // ふわっと次の行を追加
             closeModal();
             currentNthIdx = null;
         }
@@ -2030,9 +2181,18 @@
             const saved = localStorage.getItem('nthWeekdayDefaults');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // 枠数に合わせてマージ（将来の拡張で枠が増えても安全）
-                for (let i = 0; i < NTH_WEEKDAY_COUNT; i++) {
-                    if (parsed[i]) nthWeekdayDefaults[i] = parsed[i];
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    // 旧形式（iconプロパティあり）をマイグレーション
+                    if (parsed[0].hasOwnProperty('icon')) {
+                        nthWeekdayDefaults = migrateNthData(parsed);
+                    } else {
+                        nthWeekdayDefaults = parsed;
+                    }
+                    // 末尾が空でなければ追加行を用意
+                    const last = nthWeekdayDefaults[nthWeekdayDefaults.length - 1];
+                    if ((last.iconL || last.iconR) && nthWeekdayDefaults.length < NTH_MAX_ROWS) {
+                        nthWeekdayDefaults.push({ n: 1, dow: 0, iconL: null, labelL: '', iconR: null, labelR: '' });
+                    }
                 }
             }
             buildNthWeekdayUI();
@@ -2062,7 +2222,7 @@
             // 適用予定の日を先に確認
             const targets = [];
             nthWeekdayDefaults.forEach(item => {
-                if (!item.icon) return;
+                if (!item.iconL && !item.iconR) return;
                 const day = getNthWeekdayDate(year, month, item.n, item.dow);
                 if (day) targets.push({ day, item });
             });
@@ -2074,22 +2234,27 @@
 
             // 上書き確認
             targets.forEach(({ day }) => {
+                if (calendarData[day]?.image1?.icon) overwriteCount++;
                 if (calendarData[day]?.image2?.icon) overwriteCount++;
             });
 
             if (overwriteCount > 0) {
                 const ok = await showConfirmDialog('上書き確認',
-                    `${overwriteCount}日分の右シールが上書きされます。よろしいですか？`);
+                    `${overwriteCount}日分のシールが上書きされます。よろしいですか？`);
                 if (!ok) return;
             }
 
             // 適用
             targets.forEach(({ day, item }) => {
                 if (!calendarData[day]) calendarData[day] = { image1: null, image2: null, comment: '' };
-                // 将来: slot === 1 なら image1、slot === 2 なら image2
-                calendarData[day].image2 = { icon: item.icon, label: item.label };
-                // 手動適用時はフラグをリセット
-                calendarData[day].image2Intentional = false;
+                if (item.iconL) {
+                    calendarData[day].image1 = { icon: item.iconL, label: item.labelL };
+                    calendarData[day].image1Intentional = false;
+                }
+                if (item.iconR) {
+                    calendarData[day].image2 = { icon: item.iconR, label: item.labelR };
+                    calendarData[day].image2Intentional = false;
+                }
                 appliedCount++;
             });
 
@@ -2145,16 +2310,20 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dow = (firstDay+day-1)%7;
                 const def = weekdayDefaults[dow];
+                let image1 = def ? { icon: def, label: images.find(i=>i.icon===def)?.label||'' } : null;
                 let image2 = null;
                 nthWeekdayDefaults.forEach(item => {
-                    if (!item.icon) return;
+                    if (!item.iconL && !item.iconR) return;
                     const nthDay = getNthWeekdayDate(year, month, item.n, item.dow);
-                    if (nthDay === day) image2 = { icon: item.icon, label: item.label };
+                    if (nthDay === day) {
+                        if (item.iconL) image1 = { icon: item.iconL, label: item.labelL };
+                        if (item.iconR) image2 = { icon: item.iconR, label: item.labelR };
+                    }
                 });
                 calendarData[day] = {
-                    image1: def ? { icon: def, label: images.find(i=>i.icon===def)?.label||'' } : null,
+                    image1: image1,
                     image2: image2,
-                    image1Intentional: false,  // フラグリセット
+                    image1Intentional: false,
                     image2Intentional: false,
                     comment: calendarData[day]?.comment || ''
                 };
